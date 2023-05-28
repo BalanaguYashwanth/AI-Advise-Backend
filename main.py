@@ -5,8 +5,10 @@ from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from Bard import Chatbot
 from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 
 app = FastAPI()
+handler = Mangum(app)
 
 origins = [
     ###### we should allow only frontend url ########
