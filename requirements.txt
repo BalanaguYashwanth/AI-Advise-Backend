@@ -6,3 +6,4 @@ rich
 pydantic
 python-dotenv
 pysocks
+mangum

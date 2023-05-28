@@ -23,11 +23,11 @@ load_dotenv()
 
 
 def load_proxies():
-    proxy_enabled = os.getenv("PROXY_ENABLED", "False").lower() == "true"
+    proxy_enabled = os.environ.get("PROXY_ENABLED", "False").lower() == "true"
     if proxy_enabled:
         return {
-            "http": os.getenv("PROXY_HTTP", ""),
-            "https": os.getenv("PROXY_HTTPS", ""),
+            "http":os.environ.get("PROXY_HTTP", ""),
+            "https":os.environ.get("PROXY_HTTPS", ""),
         }
     else:
         return {}

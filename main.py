@@ -13,6 +13,7 @@ handler = Mangum(app)
 origins = [
     ###### we should allow only frontend url ########
     "http://localhost:3000",
+    "https://multi-chat-ai.web.app"
 ]
 
 app.add_middleware(
@@ -30,8 +31,8 @@ class TextInput(BaseModel):
 @app.post('/v1/chat/completions')
 async def completions(textInput:TextInput):
 
-    open_ai_key =  os.getenv('OPENAI_API_KEY')
-    open_ai_url =  os.getenv('OPENAI_API_URL')
+    open_ai_key =  os.environ['OPENAI_API_KEY']
+    open_ai_url =  os.environ['OPENAI_API_URL']
 
     OpenAIRequestData = {
       "model": "gpt-3.5-turbo",
@@ -53,17 +54,26 @@ async def completions(textInput:TextInput):
     r = requests.post(f'{open_ai_url}/v1/chat/completions', requestedOpenAIJsonObject, headers = OpenAIHeaders)
     return r.json()
 
+@app.get("/")
+async def status():
+    return {'status':'healthy'}
+
 @app.post("/ask")
 async def ask(request: Request, message: TextInput):
     # Get the user-defined auth key from the environment variables
-    user_auth_key = os.getenv('USER_AUTH_KEY')
-    session_id = os.getenv('SESSION_ID')
+    user_auth_key = os.environ.get('USER_AUTH_KEY')
+    session_id = os.environ['SESSION_ID']
+
     # Check if the user has defined an auth key,
     # If so, check if the auth key in the header matches it.
     if user_auth_key and user_auth_key != request.headers.get('Authorization'):
         raise HTTPException(status_code=401, detail='Invalid authorization key')
 
     # Execute your code without authenticating the resource
-    chatbot = Chatbot(session_id)
-    response = chatbot.ask(message.message)
-    return response
+    try:
+      chatbot = Chatbot(session_id)
+      response = chatbot.ask(message.message)
+      return response
+    except Exception as e:
+      print("An exception occurred",e)
+
