@@ -1,5 +1,4 @@
 import os
-import time
 import json
 import requests
 from fastapi import FastAPI, HTTPException, Request
@@ -7,9 +6,7 @@ from pydantic import BaseModel
 from Bard import Chatbot
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
-import sseclient
 from starlette.responses import StreamingResponse
-# from fastapi.responses import StreamingResponse
 
 
 app = FastAPI()
@@ -53,38 +50,13 @@ async def completions(message: TextInput):
           "content": message.message,
         },
       ],
-      "max_tokens": 100,
+      # "max_tokens": 100, #due to max tokens asnwers are limited response
       "stream": True,
     }
 
     requestedOpenAIJsonObject = json.dumps(OpenAIRequestData)
   
     response = requests.post(f'{open_ai_url}/v1/chat/completions', requestedOpenAIJsonObject, stream= True,headers = OpenAIHeaders)
-    
-    # for line in response.iter_content(chunk_size=1024):
-    #       completion_reason = line["choices"][0]["finish_reason"]
-    #       if "content" in completion_reason["choices"][0].delta:
-    #           current_response = completion_reason["choices"][0].delta.content
-    #           print(current_response)
-    #           yield {"data": current_response}
-    #           time.sleep(0.25)
-
-   
-    # for chunk in response.iter_content(chunk_size=1024):
-    #   if chunk:
-    #       print(chunk.decode('utf-8'), end = "", flush = True)
-
-    # client = sseclient.SSEClient(r)
-    # for event in client.events():
-    #    if event.data != '[DONE]':
-    #       print(json.loads(event.data)['choices'][0]['text'],end="", flush=True)
-
-    # for data in response.iter_content(chunk_size=1024):
-    #    print(data)
-      #  if data != '[DONE]':
-      #     print(json.loads(data)['choices'][0]['text'],end="", flush=True)
-
-    # return 'got it'
     return StreamingResponse(response.iter_content(chunk_size=1024), media_type='text/event-stream')
   
 
