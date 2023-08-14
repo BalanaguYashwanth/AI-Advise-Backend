@@ -10,7 +10,7 @@ from mangum import Mangum
 from starlette.responses import StreamingResponse
 import google.generativeai as palm
 from database import get_db
-from schema import MessageItemSchema
+from schema import MessageItemSchema, RecentTitleSchema
 from models import Recent_Title, Message_Item
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
@@ -79,24 +79,22 @@ async def getRecentTitles(uid: str, db: Session = Depends(get_db)):
     try:
         return db.query(Recent_Title).filter(Recent_Title.uid == uid).all()
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=400, detail=f"Error {e}")
 
 
 @app.post('/recent_title')
-async def saveRecentTitle(recent_title: Request, db: Session = Depends(get_db)):
+async def saveRecentTitle(recent_title: RecentTitleSchema, db: Session = Depends(get_db)):
     try:
-        response = await recent_title.json()
-        db_title = Recent_Title(uid=response['uid'], title=response['title'])
+        db_title = Recent_Title(uid=recent_title.uid, title=recent_title.title)
         db.add(db_title)
         db.commit()
-        for doc in db:
-            response['id'] = doc.id
-            response['time_created'] = doc.time_created
         db.refresh(db_title)
-        return response
+        return db_title
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error {e}")
+
 
 @app.post('/message')
 async def saveMessage(message: MessageItemSchema, db: Session = Depends(get_db)):
@@ -111,9 +109,11 @@ async def saveMessage(message: MessageItemSchema, db: Session = Depends(get_db))
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error {e}")
 
+
 @app.get('/message/{id}')
 async def getMessages(id: str, db: Session = Depends(get_db)):
     try:
         return db.query(Message_Item).filter(Message_Item.recent_title_id == id).all()
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=400, detail=f"Error {e}")
