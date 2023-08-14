@@ -10,3 +10,4 @@ lib
 lambda_function.zip
 key.json
 config.py
+alembic

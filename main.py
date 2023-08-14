@@ -3,17 +3,22 @@ import json
 import requests
 import datetime
 from config import pb, db
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException, Depends
 from pydantic import BaseModel
 from Bard import Chatbot
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from starlette.responses import StreamingResponse
 import google.generativeai as palm
+from database import get_db
+from models import Recent_Title
+from fastapi.encoders import jsonable_encoder
+from sqlalchemy.orm import Session
 
 app = FastAPI()
 handler = Mangum(app)
 palm.configure(api_key=os.environ['BARD_API_KEY'])
+db = Depends(get_db)
 
 origins = [
     ###### we should allow only frontend url ########
@@ -128,3 +133,19 @@ async def ask(contents: TextInput):
         return response.last
     except Exception as e:
         print("An exception occurred", e)
+
+
+@app.post('/recent_title')
+async def saveRecentTitle(recent_title: Request, db: Session = Depends(get_db)):
+    try:
+        response = await recent_title.json()
+        db_title = Recent_Title(uid=response['uid'], title=response['title'])
+        db.add(db_title)
+        db.commit()
+        for doc in db:
+            response['id'] = doc.id
+        db.refresh(db_title)
+        return response
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error {e}")
