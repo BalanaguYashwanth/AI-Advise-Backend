@@ -17,34 +17,13 @@ class Message_Item(Base):
     # Useful for analytics at when we setup edit feature
     time_updated = Column(DateTime(timezone=True), onupdate=func.now())
 
-    title_id = Column(String, ForeignKey("recent_title.id"))
-    title = relationship("Recent_Title")
+    recent_title_id = Column(String, ForeignKey("recent_title.id"))
+    recent_title = relationship("Recent_Title")
 
 
 class Recent_Title(Base):
     __tablename__ = "recent_title"
-    # need to use UUID
-   
-    id = Column(String,primary_key=True, index=True,default=getULID)
-    uid = Column(String, unique=True, nullable=False)
+    id = Column(String, primary_key=True, index=True, default=getULID)
+    uid = Column(String, nullable=False)
     title = Column(String(255), nullable=False)
     time_created = Column(DateTime(timezone=True), server_default=func.now())
-
-    # section_id = Column(Integer, ForeignKey("section.id"))
-    # section = relationship("Section")
-
-# class Section(Base):
-#     __tablename__ = "section"
-#     id = Column(Integer, primary_key=True)
-#     name = Column(String(255), nullable=False)
-
-#     user_id = Column(Integer,ForeignKey('user.id'))
-#     user = relationship('User')
-
-# class User(Base):
-#     __tablename__ = "user"
-#     id = Column(Integer, primary_key=True)
-#     uid = Column(String)
-#     name = Column(String)
-#     email = Column(String)
-#     time_created = Column(DateTime(timezone=True), server_default=func.now())

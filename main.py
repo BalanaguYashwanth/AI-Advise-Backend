@@ -11,7 +11,8 @@ from mangum import Mangum
 from starlette.responses import StreamingResponse
 import google.generativeai as palm
 from database import get_db
-from models import Recent_Title
+from schema import MessageItemSchema
+from models import Recent_Title, Message_Item
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
@@ -132,7 +133,15 @@ async def ask(contents: TextInput):
         response = palm.chat(messages=contents.message)
         return response.last
     except Exception as e:
-        print("An exception occurred", e)
+        raise HTTPException(status_code=400, detail=f"Error {e}")
+
+
+@app.get('/recent_titles/{uid}')
+async def getRecentTitles(uid: str, db: Session = Depends(get_db)):
+    try:
+        return db.query(Recent_Title).filter(Recent_Title.uid == uid).all()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error {e}")
 
 
 @app.post('/recent_title')
@@ -146,6 +155,19 @@ async def saveRecentTitle(recent_title: Request, db: Session = Depends(get_db)):
             response['id'] = doc.id
         db.refresh(db_title)
         return response
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error {e}")
+
+@app.post('/message')
+async def saveMessage(message: MessageItemSchema, db: Session = Depends(get_db)):
+    try:
+        db_msg = Message_Item(user=message.user, chatgpt=message.chatgpt,
+                              bard=message.bard, recent_title_id=message.recent_title_id)
+        db.add(db_msg)
+        db.commit()
+        db.refresh(db_msg)
+        return db_msg
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error {e}")

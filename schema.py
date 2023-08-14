@@ -1,11 +1,18 @@
 from pydantic import BaseModel
 
 class MessageItemSchema(BaseModel):
-    pass
-
-class RecentTitleSchema(BaseModel):
-    uid:str
-    title:str
+    user: str
+    bard: str
+    chatgpt: str
+    recent_title_id: str
 
     class Config:
-        orm_mode=True
+        orm_mode = True
+
+
+class RecentTitleSchema(BaseModel):
+    uid: str
+    title: str
+
+    class Config:
+        orm_mode = True
