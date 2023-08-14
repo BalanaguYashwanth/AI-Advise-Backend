@@ -1,7 +1,6 @@
 import os
 import json
 import requests
-import datetime
 from config import pb, db
 from fastapi import FastAPI, Request, HTTPException, Depends
 from pydantic import BaseModel
@@ -44,67 +43,6 @@ class TextInput(BaseModel):
 @app.get("/")
 async def status():
     return {'status': 'healthy'}
-
-
-@app.post("/save/history")
-async def postMessages(request: Request):
-    jsonData = await request.json()
-    uid = jsonData['uid']
-    title = jsonData['title']
-    messages = jsonData['messages']
-    try:
-        db.collection(uid).document(title).set({'messages': messages})
-        return {'response': 'response'}, 200
-    except Exception as e:
-        return f'{e}', 400
-
-
-@app.post('/fetch/history/title')
-async def getMessages(request: Request):
-    doc_ids = []
-    index = 0
-    jsonData = await request.json()
-    uid = jsonData['uid']
-    try:
-        collectionData = db.collection(uid).get()
-
-        for doc in collectionData:
-            timestamp = getUnixTimeFromDocSnapShot(doc.update_time)
-            doc_id = doc.id
-            updated_doc_obj = getDocumentsArray(index, doc_id, timestamp)
-            doc_ids.append(updated_doc_obj)
-            index = index+1
-        return {'response': doc_ids}
-    except Exception as e:
-        return f'{e}', 400
-
-
-def getDocumentsArray(index, doc_id, timestamp):
-    doc_obj = {}
-    doc_obj['id'] = index
-    doc_obj['title'] = doc_id
-    doc_obj['updated_time'] = timestamp
-    return doc_obj
-
-
-def getUnixTimeFromDocSnapShot(doc_time):
-    updated_time_str = doc_time.strftime('%Y-%m-%d %H:%M:%S')
-    time_obj = datetime.datetime.strptime(
-        updated_time_str, "%Y-%m-%d %H:%M:%S")
-    formatted_unix_time = int(time_obj.timestamp())
-    return formatted_unix_time
-
-
-@app.post('/fetch/history')
-async def getHistoryItem(request: Request):
-    jsonData = await request.json()
-    uid = jsonData['uid']
-    doc_title = jsonData['title']
-    try:
-        data = db.collection(uid).document(doc_title).get()
-        return {'response': data.to_dict()}
-    except Exception as e:
-        return f'{e}', 400
 
 
 @app.post('/v1/chat/completions')
@@ -153,6 +91,7 @@ async def saveRecentTitle(recent_title: Request, db: Session = Depends(get_db)):
         db.commit()
         for doc in db:
             response['id'] = doc.id
+            response['time_created'] = doc.time_created
         db.refresh(db_title)
         return response
     except Exception as e:
@@ -170,4 +109,11 @@ async def saveMessage(message: MessageItemSchema, db: Session = Depends(get_db))
         return db_msg
     except Exception as e:
         db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error {e}")
+
+@app.get('/message/{id}')
+async def getMessages(id: str, db: Session = Depends(get_db)):
+    try:
+        return db.query(Message_Item).filter(Message_Item.recent_title_id == id).all()
+    except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error {e}")
