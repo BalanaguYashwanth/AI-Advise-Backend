@@ -44,7 +44,6 @@ class TextInput(BaseModel):
 async def status():
     return {'status': 'healthy'}
 
-
 @app.post('/v1/chat/completions')
 async def completions(contents: Request):
 
@@ -58,8 +57,8 @@ async def completions(contents: Request):
     try:
         request_info = await contents.json()
         requestedOpenAIJsonObject = json.dumps(request_info)
-        response = requests.post(f'{open_ai_url}/v1/chat/completions',
-                                 requestedOpenAIJsonObject, stream=True, headers=OpenAIHeaders)
+        response = requests.post(f'{open_ai_url}/v1/completions',
+                                 requestedOpenAIJsonObject, headers=OpenAIHeaders)
         return StreamingResponse(response.iter_content(chunk_size=1024), media_type='text/event-stream')
     except Exception as e:
         return f'{e}', 400
@@ -68,8 +67,12 @@ async def completions(contents: Request):
 @app.post("/ask")
 async def ask(contents: TextInput):
     try:
-        response = palm.chat(messages=contents.message)
-        return response.last
+        completion = palm.generate_text(
+            model='models/text-bison-001',
+            prompt=contents.message,
+            temperature=0,
+        )
+        return completion.result
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error {e}")
 
