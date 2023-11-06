@@ -58,7 +58,7 @@ async def completions(contents: Request):
         request_info = await contents.json()
         requestedOpenAIJsonObject = json.dumps(request_info)
         response = requests.post(f'{open_ai_url}/v1/completions',
-                                 requestedOpenAIJsonObject, headers=OpenAIHeaders)
+                                 requestedOpenAIJsonObject,headers=OpenAIHeaders)
         return StreamingResponse(response.iter_content(chunk_size=1024), media_type='text/event-stream')
     except Exception as e:
         return f'{e}', 400
@@ -84,6 +84,8 @@ async def getRecentTitles(uid: str, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error {e}")
+    finally:
+        db.close()
 
 
 @app.post('/recent_title')
@@ -120,3 +122,5 @@ async def getMessages(id: str, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error {e}")
+    finally:
+        db.close()
