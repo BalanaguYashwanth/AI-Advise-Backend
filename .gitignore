@@ -8,6 +8,11 @@ __pycache__
 
 lib
 lambda_function.zip
+
+#keys
 key.json
+
+#config 
 config.py
+firebase_config.py
 alembic

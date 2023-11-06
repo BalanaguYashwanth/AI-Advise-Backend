@@ -1,7 +1,6 @@
 import os
 import json
 import requests
-from config import pb, db
 from fastapi import FastAPI, Request, HTTPException, Depends
 from pydantic import BaseModel
 from Bard import Chatbot
@@ -12,13 +11,17 @@ import google.generativeai as palm
 from database import get_db
 from schema import MessageItemSchema, RecentTitleSchema
 from models import Recent_Title, Message_Item
-from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
+from firebase_admin import auth
+from firebase_config import firebase_admin_app
+from functools import wraps
 
 app = FastAPI()
 handler = Mangum(app)
 palm.configure(api_key=os.environ['BARD_API_KEY'])
 db = Depends(get_db)
+
+firebase_admin_app()
 
 origins = [
     ###### we should allow only frontend url ########
@@ -44,8 +47,21 @@ class TextInput(BaseModel):
 async def status():
     return {'status': 'healthy'}
 
+def verify_token(req:Request):
+    try:
+        token = req.headers["Authorization"]
+        [bearer_text,access_token] =  token.split()
+        decoded_token = auth.verify_id_token(id_token=access_token)
+        if decoded_token['iss']:
+            return True
+        else:
+            raise HTTPException(status_code=401,detail="Unauthorized")
+    except Exception as e:
+        raise HTTPException(status_code=401,detail="Unauthorized")
+
+
 @app.post('/v1/chat/completions')
-async def completions(contents: Request):
+async def completions(contents: Request,authorized: bool = Depends(verify_token)):
 
     open_ai_key = os.environ['OPENAI_API_KEY']
     open_ai_url = os.environ['OPENAI_API_URL']
@@ -65,7 +81,7 @@ async def completions(contents: Request):
 
 
 @app.post("/ask")
-async def ask(contents: TextInput):
+async def ask(contents: TextInput,authorized: bool = Depends(verify_token)):
     try:
         completion = palm.generate_text(
             model='models/text-bison-001',
@@ -78,7 +94,7 @@ async def ask(contents: TextInput):
 
 
 @app.get('/recent_titles/{uid}')
-async def getRecentTitles(uid: str, db: Session = Depends(get_db)):
+async def getRecentTitles(uid: str, db: Session = Depends(get_db),authorized: bool = Depends(verify_token)):
     try:
         return db.query(Recent_Title).filter(Recent_Title.uid == uid).all()
     except Exception as e:
@@ -89,7 +105,7 @@ async def getRecentTitles(uid: str, db: Session = Depends(get_db)):
 
 
 @app.post('/recent_title')
-async def saveRecentTitle(recent_title: RecentTitleSchema, db: Session = Depends(get_db)):
+async def saveRecentTitle(recent_title: RecentTitleSchema, db: Session = Depends(get_db),authorized: bool = Depends(verify_token)):
     try:
         db_title = Recent_Title(uid=recent_title.uid, title=recent_title.title)
         db.add(db_title)
@@ -102,7 +118,7 @@ async def saveRecentTitle(recent_title: RecentTitleSchema, db: Session = Depends
 
 
 @app.post('/message')
-async def saveMessage(message: MessageItemSchema, db: Session = Depends(get_db)):
+async def saveMessage(message: MessageItemSchema, db: Session = Depends(get_db),authorized: bool = Depends(verify_token)):
     try:
         db_msg = Message_Item(user=message.user, chatgpt=message.chatgpt,
                               bard=message.bard, recent_title_id=message.recent_title_id)
@@ -116,7 +132,7 @@ async def saveMessage(message: MessageItemSchema, db: Session = Depends(get_db))
 
 
 @app.get('/message/{id}')
-async def getMessages(id: str, db: Session = Depends(get_db)):
+async def getMessages(id: str, db: Session = Depends(get_db),authorized: bool = Depends(verify_token)):
     try:
         return db.query(Message_Item).filter(Message_Item.recent_title_id == id).all()
     except Exception as e:

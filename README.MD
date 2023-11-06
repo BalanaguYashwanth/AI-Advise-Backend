@@ -2,6 +2,8 @@
 
 This project provides a FastAPI wrapper for interacting with Google Bard, a conversational AI by Google. It includes a library for sending requests to Google Bard, and a simple API server for interacting with Bard through a REST API. This allows users to integrate Bard with their own applications or services through a single API endpoint.
 
+Auth Resource - https://stackoverflow.com/questions/64146591/custom-authentication-for-fastapi
+
 ## Getting Started
 
 These instructions will help you set up and run the project on your local machine for development and testing purposes.
