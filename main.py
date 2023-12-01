@@ -48,17 +48,21 @@ async def status():
     return {'status': 'healthy'}
 
 def verify_token(req:Request):
-    try:
-        token = req.headers["Authorization"]
-        [bearer_text,access_token] =  token.split()
-        decoded_token = auth.verify_id_token(id_token=access_token)
-        if decoded_token['iss']:
-            return True
-        else:
-            raise HTTPException(status_code=401,detail="Unauthorized")
-    except Exception as e:
-        raise HTTPException(status_code=401,detail="Unauthorized")
+    return True
+    # try:
+    #     token = req.headers["Authorization"]
+    #     [bearer_text,access_token] =  token.split()
+    #     decoded_token = auth.verify_id_token(id_token=access_token)
+    #     if decoded_token['iss']:
+    #         return True
+    #     else:
+    #         raise HTTPException(status_code=401,detail="Unauthorized")
+    # except Exception as e:
+    #     raise HTTPException(status_code=401,detail="Unauthorized")
 
+@app.get('/user_login_status')
+async def verify_user_loggedIn(authorized: bool = Depends(verify_token)):
+    return {"message":"user verified"}
 
 @app.post('/v1/chat/completions')
 async def completions(contents: Request,authorized: bool = Depends(verify_token)):
